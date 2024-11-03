@@ -20,23 +20,35 @@ let score = 0;
 
 window.addEventListener('resize', resizeGame);
 
+// Add click handler to focus the canvas
+window.addEventListener('click', function(e) {
+    if (e.target === board) {
+        board.focus();
+    }
+});
+
+// Add touch handler for mobile devices
+window.addEventListener('touchstart', function(e) {
+    if (e.target === board) {
+        e.preventDefault(); // Prevent scrolling
+        board.focus();
+    }
+});
+
 function resizeGame() {
     board.width = window.innerWidth;
     board.height = window.innerHeight;
     
-    // Ensure blockSize is a whole number to avoid alignment issues
     blockSize = Math.floor(Math.min(board.width, board.height) / 40);
     
     rows = Math.floor(board.height / blockSize);
     cols = Math.floor(board.width / blockSize);
     
     if (!gameOver) {
-        // Ensure snake position is grid-aligned
         snakeX = Math.floor(snakeX / blockSize) * blockSize;
         snakeY = Math.floor(snakeY / blockSize) * blockSize;
     }
     
-    // Realign food to grid
     foodX = Math.floor(foodX / blockSize) * blockSize;
     foodY = Math.floor(foodY / blockSize) * blockSize;
     
@@ -49,15 +61,49 @@ window.onload = function() {
     board = document.getElementById("board");
     context = board.getContext("2d");
     
+    // Make canvas focusable
+    board.tabIndex = 1;
+    
+    // Add visual focus indicator
+    board.style.outline = 'none';
+    
+    // Auto-focus the canvas on load
+    board.focus();
+    
     resizeGame();
     
-    // Ensure initial snake position is grid-aligned
     snakeX = Math.floor(cols / 4) * blockSize;
     snakeY = Math.floor(rows / 2) * blockSize;
     
     placeFood();
-    document.addEventListener("keyup", changeDirection);
+    
+    // Listen for keydown instead of keyup for more responsive controls
+    document.addEventListener("keydown", changeDirection);
+    
+    // Add message to show when game needs focus
+    window.addEventListener('blur', function() {
+        if (!gameOver) {
+            displayFocusMessage();
+        }
+    });
+    
     setInterval(update, 1000/10);
+}
+
+// Add new function to display focus message
+function displayFocusMessage() {
+    context.fillStyle = "rgba(0, 0, 0, 0.75)";
+    context.fillRect(0, 0, board.width, board.height);
+    
+    context.fillStyle = "white";
+    context.font = `${blockSize}px Courier`;
+    
+    const focusText = "Click/Tap to Play";
+    const textWidth = context.measureText(focusText).width;
+    const x = (board.width - textWidth) / 2;
+    const y = board.height / 2;
+    
+    context.fillText(focusText, x, y);
 }
 
 function update() {
@@ -72,7 +118,6 @@ function update() {
     context.fillStyle = "red";
     context.fillRect(foodX, foodY, blockSize, blockSize);
 
-    // Add debug visualization
     context.strokeStyle = "rgba(255, 255, 255, 0.2)";
     for (let x = 0; x < cols; x++) {
         for (let y = 0; y < rows; y++) {
@@ -80,7 +125,6 @@ function update() {
         }
     }
 
-    // Precise position comparison
     if (Math.abs(snakeX - foodX) < 1 && Math.abs(snakeY - foodY) < 1) {
         snakeBody.push([foodX, foodY]);
         placeFood();
@@ -98,7 +142,6 @@ function update() {
     snakeX += velocityX * blockSize;
     snakeY += velocityY * blockSize;
     
-    // Ensure snake stays grid-aligned
     snakeX = Math.round(snakeX / blockSize) * blockSize;
     snakeY = Math.round(snakeY / blockSize) * blockSize;
     
@@ -138,12 +181,17 @@ function displayGameOver() {
     const x = (board.width - textWidth) / 2;
     const y = board.height / 2;
     
-    context.fillText(gameOverText, x -90, y - blockSize * 2);
+    context.fillText(gameOverText, x - 90, y - blockSize * 2);
     context.fillText(scoreText, x - 90, y);
     context.fillText(restartText, x - 90, y + blockSize * 2);
 }
 
 function changeDirection(e) {
+    // Prevent default behavior for arrow keys to avoid scrolling
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
+        e.preventDefault();
+    }
+    
     if (gameOver && e.code === "Space") {
         resetGame();
         return;
@@ -168,7 +216,6 @@ function changeDirection(e) {
 }
 
 function placeFood() {
-    // Ensure food is placed exactly on grid intersections
     foodX = Math.floor(Math.random() * cols) * blockSize;
     foodY = Math.floor(Math.random() * rows) * blockSize;
 }
@@ -182,4 +229,5 @@ function resetGame() {
     score = 0;
     gameOver = false;
     placeFood();
+    board.focus(); // Ensure the game has focus when restarting
 }
